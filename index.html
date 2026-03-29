@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Mini Games Hub</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #0f0c29;
+            background-image: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Hiệu ứng hạt nền (Background Particle) đơn giản bằng CSS */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 10%, transparent 10%),
+                        radial-gradient(circle, rgba(255,255,255,0.05) 10%, transparent 10%);
+            background-size: 50px 50px;
+            background-position: 0 0, 25px 25px;
+            z-index: -1;
+            animation: moveBackground 20s linear infinite;
+        }
+
+        @keyframes moveBackground {
+            from { background-position: 0 0, 25px 25px; }
+            to { background-position: 100px 100px, 125px 125px; }
+        }
+
+        header {
+            text-align: center;
+            margin-top: 50px;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: #b3b3b3;
+            margin-top: 10px;
+        }
+
+        /* Lưới hiển thị Game */
+        .game-grid {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1000px;
+            padding: 20px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        /* Thẻ Game (Game Card) */
+        .game-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            width: 300px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Hiệu ứng viền chạy trên thẻ */
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(transparent, transparent, transparent, #00f2fe);
+            animation: rotateBorder 4s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .game-card::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            background: #1e1b4b; /* Màu nền trong của card */
+            border-radius: 17px;
+            z-index: -1;
+        }
+
+        .game-card:hover {
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(0, 242, 254, 0.3);
+        }
+
+        .game-card:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes rotateBorder {
+            100% { transform: rotate(360deg); }
+        }
+
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-desc {
+            font-size: 0.9rem;
+            color: #a3a3a3;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Nút Play */
+        .play-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 30px;
+            transition: 0.3s;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0, 114, 255, 0.4);
+        }
+
+        .play-btn:hover {
+            background: linear-gradient(45deg, #0072ff, #00c6ff);
+            box-shadow: 0 8px 25px rgba(0, 198, 255, 0.6);
+            transform: scale(1.1);
+        }
+
+        /* Animations lúc tải trang */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dấu cộng để thêm game mới */
+        .add-game {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            background: transparent;
+        }
+
+        .add-game:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.05);
+        }
+        
+        .add-game::before, .add-game::after {
+            display: none; /* Tắt viền neon cho card thêm game */
+        }
+        
+        .add-game .game-icon {
+            color: rgba(255,255,255,0.5);
+            transition: 0.3s;
+        }
+
+        .add-game:hover .game-icon {
+            color: #00f2fe;
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>My Game Hub</h1>
+        <p class="subtitle">Trạm dừng chân - Kết nối người chơi online</p>
+    </header>
+
+    <main class="game-grid">
+        
+        <article class="game-card">
+            <div class="game-icon">❌⭕</div>
+            <h2 class="game-title">Cờ Caro (Gomoku)</h2>
+            <p class="game-desc">Trò chơi trí tuệ kinh điển. Đấu trí online cùng bạn bè qua hệ thống Firebase thời gian thực.</p>
+            <a href="https://hyakjbw.github.io/minigame/" class="play-btn" target="_blank">Chơi Ngay</a>
+        </article>
+
+        <article class="game-card">
+            <div class="game-icon">♚♙</div>
+            <h2 class="game-title">Cờ Vua (Chess)</h2>
+            <p class="game-desc">Thách thức tư duy chiến thuật. So tài cao thấp trên bàn cờ 64 ô với tính năng multiplayer.</p>
+            <a href="https://hyakjbw.github.io/covua/" class="play-btn" target="_blank">Chơi Ngay</a>
+        </article>
+
+        <article class="game-card add-game" onclick="alert('Tính năng đang phát triển. Sắp có game mới!')">
+            <div class="game-icon">➕</div>
+            <h2 class="game-title">Sắp ra mắt</h2>
+            <p class="game-desc">Một mini game online mới đang được code...</p>
+        </article>
+
+    </main>
+
+</body>
+</html>
