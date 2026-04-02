@@ -1,9 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { 
-    getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged 
+    getAuth, onAuthStateChanged, signInAnonymously, signOut,
+    signInWithPopup, GoogleAuthProvider, 
+    createUserWithEmailAndPassword, signInWithEmailAndPassword 
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// Bê nguyên Firebase Config của bạn vào đây
+// Cấu hình Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyAVEiHOD1xTnlAFW3h-YjmQcHPsx4saaLo",
   authDomain: "cocaro-8be98.firebaseapp.com",
@@ -15,51 +17,100 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+const googleProvider = new GoogleAuthProvider();
 
-// Lấy các DOM Elements
-const loginSection = document.getElementById("loginSection");
-const userInfo = document.getElementById("userInfo");
-const gameMenu = document.getElementById("gameMenu");
-const btnLogin = document.getElementById("btnLogin");
+// Lấy các DOM Element
+const authPanel = document.getElementById("authPanel");
 const btnLogout = document.getElementById("btnLogout");
+const userName = document.getElementById("userName");
+const avatar = document.getElementById("avatar");
+const userRole = document.getElementById("userRole");
 
-// Lắng nghe trạng thái người dùng (Đã đăng nhập hay chưa)
+const emailInput = document.getElementById("emailInput");
+const passInput = document.getElementById("passInput");
+
+// ==========================================
+// 1. TỰ ĐỘNG KHÁCH & QUẢN LÝ TRẠNG THÁI
+// ==========================================
 onAuthStateChanged(auth, (user) => {
-  if (user) {
-    // ĐÃ ĐĂNG NHẬP
-    loginSection.style.display = "none";
-    userInfo.style.display = "flex";
-    gameMenu.style.display = "block";
-    
-    document.getElementById("userName").textContent = user.displayName;
-    document.getElementById("avatar").src = user.photoURL;
-    
-    // Lưu thông tin cơ bản vào LocalStorage để game con (như Caro) dễ dàng lấy ra dùng
+    if (!user) {
+        // KHÔNG CÓ USER -> TỰ ĐỘNG TẠO KHÁCH NGAY LẬP TỨC
+        signInAnonymously(auth).catch(err => alert("Lỗi kết nối máy chủ: " + err.message));
+        return; // Dừng lại, Firebase sẽ tự động gọi lại hàm này khi tạo khách xong
+    }
+
+    // ĐÃ CÓ USER (LÀ KHÁCH HOẶC TÀI KHOẢN CHÍNH THỨC)
     localStorage.setItem("hub_uid", user.uid);
-    localStorage.setItem("hub_name", user.displayName);
-  } else {
-    // CHƯA ĐĂNG NHẬP
-    loginSection.style.display = "block";
-    userInfo.style.display = "none";
-    gameMenu.style.display = "none";
+
+    if (user.isAnonymous) {
+        // Xử lý Giao diện cho KHÁCH
+        const guestName = "Khách_" + user.uid.substring(0, 4);
+        userName.textContent = guestName;
+        userRole.textContent = "Ẩn danh";
+        userRole.className = "badge guest";
+        avatar.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+        
+        authPanel.style.display = "block"; // Hiện khung nâng cấp TK
+        btnLogout.style.display = "none";  // Khách không cần nút đăng xuất
+        
+        localStorage.setItem("hub_name", guestName);
+        localStorage.setItem("hub_is_guest", "true");
+    } else {
+        // Xử lý Giao diện cho TÀI KHOẢN CHÍNH THỨC
+        // Nếu đăng nhập Google có displayName, nếu Email/Pass thì lấy khúc đầu của Email
+        const finalName = user.displayName || user.email.split('@')[0];
+        userName.textContent = finalName;
+        userRole.textContent = "Thành viên";
+        userRole.className = "badge";
+        avatar.src = user.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.uid}`;
+        
+        authPanel.style.display = "none";  // Ẩn khung đăng nhập
+        btnLogout.style.display = "block"; // Hiện nút đăng xuất
+        
+        localStorage.setItem("hub_name", finalName);
+        localStorage.setItem("hub_is_guest", "false");
+    }
+});
+
+// ==========================================
+// 2. CÁC PHƯƠNG THỨC ĐĂNG NHẬP / ĐĂNG KÝ
+// ==========================================
+
+// Xử lý Đăng ký bằng Email
+document.getElementById("btnEmailReg").addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const pass = passInput.value.trim();
+    if (!email || pass.length < 6) return alert("Vui lòng nhập Email hợp lệ và Mật khẩu từ 6 ký tự!");
     
-    localStorage.removeItem("hub_uid");
-    localStorage.removeItem("hub_name");
-  }
+    document.getElementById("btnEmailReg").textContent = "Đang xử lý...";
+    createUserWithEmailAndPassword(auth, email, pass)
+        .then(() => alert("Đăng ký thành công!"))
+        .catch(err => {
+            alert("Lỗi đăng ký: " + err.message);
+            document.getElementById("btnEmailReg").textContent = "Đăng ký mới";
+        });
 });
 
-// Xử lý nút Đăng nhập
-btnLogin.addEventListener("click", () => {
-    btnLogin.textContent = "Đang kết nối...";
-    signInWithPopup(auth, provider).catch((error) => {
-        console.error("Lỗi đăng nhập:", error);
-        btnLogin.textContent = "Đăng nhập bằng Google";
-        alert("Lỗi đăng nhập: " + error.message);
-    });
+// Xử lý Đăng nhập bằng Email
+document.getElementById("btnEmailLogin").addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const pass = passInput.value.trim();
+    if (!email || !pass) return alert("Vui lòng nhập đầy đủ Email và Mật khẩu!");
+
+    document.getElementById("btnEmailLogin").textContent = "Đang vào...";
+    signInWithEmailAndPassword(auth, email, pass)
+        .catch(err => {
+            alert("Sai email hoặc mật khẩu!");
+            document.getElementById("btnEmailLogin").textContent = "Đăng nhập";
+        });
 });
 
-// Xử lý nút Đăng xuất
+// Xử lý Đăng nhập bằng Google
+document.getElementById("btnGoogle").addEventListener("click", () => {
+    signInWithPopup(auth, googleProvider).catch(err => alert("Lỗi đăng nhập Google: " + err.message));
+});
+
+// Xử lý Đăng xuất (Sẽ tự động trả về Khách do logic ở onAuthStateChanged)
 btnLogout.addEventListener("click", () => {
     signOut(auth);
 });
