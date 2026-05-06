@@ -1,238 +1,360 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SUNWIN Tool - Hỗ trợ phân tích</title>
-  <!-- 1. Tải PyScript -->
-  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
-  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #1a1a2e;
-      overflow: hidden;
-      height: 100vh;
-      color: #e0e0e0;
-    }
-    
-    /* Nút mở/tắt bảng điều khiển */
-    #toggle-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 999;
-      padding: 12px 24px;
-      background: #16213e;
-      color: #e0e0e0;
-      border: 1px solid #0f3460;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      transition: all 0.3s;
-    }
-    #toggle-btn:hover {
-      background: #0f3460;
-      border-color: #e94560;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUNWIN Tool - Hỗ trợ phân tích</title>
+    <!-- PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent; /* nền trong suốt để hiển thị iframe bên dưới */
+            overflow: hidden;
+            height: 100vh;
+            color: #e0e0e0;
+        }
 
-    /* Bảng điều khiển có thể kéo thả */
-    #draggable-panel {
-      position: fixed;
-      top: 50px;
-      left: 50px;
-      min-width: 360px;
-      background: rgba(22, 33, 62, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid #0f3460;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-      z-index: 1000;
-      display: none;
-      overflow: hidden;
-    }
+        /* Nút mở tool */
+        #toggle-tool-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background: #16213e;
+            color: #e0e0e0;
+            border: 1px solid #0f3460;
+            border-radius: 50px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: block;
+            transition: 0.3s;
+        }
+        #toggle-tool-btn:hover {
+            background: #0f3460;
+            border-color: #e94560;
+        }
 
-    /* Thanh tiêu đề để kéo */
-    #panel-header {
-      padding: 12px 20px;
-      background: #0f3460;
-      cursor: move;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #e94560;
-    }
-    #panel-header h3 {
-        color: #e94560;
-        font-size: 1.2em;
-    }
-    #close-panel-btn {
-      background: none;
-      border: none;
-      color: #e0e0e0;
-      font-size: 1.5em;
-      cursor: pointer;
-      line-height: 1;
-    }
-    #close-panel-btn:hover { color: #e94560; }
+        /* Panel chính */
+        #tool-panel {
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            width: 320px;
+            max-height: 80vh;
+            background: rgba(22, 33, 62, 0.96);
+            backdrop-filter: blur(8px);
+            border: 1px solid #0f3460;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            z-index: 1000;
+            display: none; /* ẩn mặc định */
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
 
-    /* Nội dung bảng */
-    .panel-content {
-      padding: 20px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
+        /* Header để kéo */
+        #panel-header {
+            padding: 10px 16px;
+            background: #0f3460;
+            cursor: grab;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e94560;
+            user-select: none;
+        }
+        #panel-header:active { cursor: grabbing; }
+        #panel-header h4 {
+            color: #e94560;
+            font-size: 1rem;
+            margin: 0;
+        }
+        #minimize-btn {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #minimize-btn:hover { color: #e94560; }
 
-    /* Các thành phần dự đoán */
-    .prediction-box {
-      background: #1a1a2e;
-      border: 1px solid #0f3460;
-      border-radius: 8px;
-      padding: 15px;
-      margin: 15px 0;
-      text-align: center;
-    }
-    .tai-text { color: #4ecca3; font-weight: bold; font-size: 1.8em; }
-    .xiu-text { color: #e94560; font-weight: bold; font-size: 1.8em; }
-    .info-text { color: #a0a0a0; font-size: 0.9em; margin: 5px 0; }
+        /* Nội dung panel */
+        .panel-body {
+            padding: 12px 16px;
+            max-height: calc(80vh - 50px);
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
 
-    /* Iframe chứa Sunwin */
-    #game-frame {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      border: none;
-      z-index: 1;
-    }
-  </style>
+        .section {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #1a1a2e;
+            border-radius: 6px;
+        }
+        .section-title {
+            color: #e94560;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .tai { color: #4ecca3; font-weight: bold; }
+        .xiu { color: #e94560; font-weight: bold; }
+        .neutral { color: #ffd700; }
+        .dim { color: #a0a0a0; }
+
+        .pred-main {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: bold;
+            padding: 10px;
+        }
+        .stats span { margin-right: 10px; }
+
+        /* Iframe Sunwin */
+        #sunwin-frame {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            border: none;
+            z-index: 0;
+            background: #000;
+        }
+
+        /* Khi panel ẩn, nút hiện */
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
+    <!-- Sunwin iframe -->
+    <iframe id="sunwin-frame" src="https://sunwin.mw" allow="camera; microphone"></iframe>
 
-  <!-- Trang web Sunwin được nhúng bên dưới -->
-  <iframe id="game-frame" src="https://sunwin.com" allow="camera; microphone"></iframe>
+    <!-- Nút mở tool -->
+    <button id="toggle-tool-btn">🧠 Tool phân tích</button>
 
-  <!-- Nút bật/tắt tool -->
-  <button id="toggle-btn" onclick="document.getElementById('draggable-panel').style.display='block'">📊 Mở Tool Phân Tích</button>
+    <!-- Panel kéo thả -->
+    <div id="tool-panel">
+        <div id="panel-header">
+            <h4>📊 SUNWIN TOOL</h4>
+            <button id="minimize-btn">─</button>
+        </div>
+        <div class="panel-body">
+            <!-- Thống kê tổng -->
+            <div class="section">
+                <div class="section-title">📈 Thống kê phiên</div>
+                <div class="stats">
+                    🟢 Thắng: <span id="win-count">0</span> | 
+                    🔴 Thua: <span id="loss-count">0</span><br>
+                    📊 Tỉ lệ đúng: <span id="accuracy">0%</span>
+                </div>
+            </div>
 
-  <!-- BẢNG ĐIỀU KHIỂN KÉO THẢ -->
-  <div id="draggable-panel">
-    <div id="panel-header">
-      <h3>🧠 SUNWIN TOOL</h3>
-      <button id="close-panel-btn" onclick="document.getElementById('draggable-panel').style.display='none'">✖</button>
+            <!-- Dự đoán hiện tại -->
+            <div class="section" style="text-align:center;">
+                <div class="section-title">🔮 Dự đoán tiếp theo</div>
+                <div id="pred-result" class="pred-main">--</div>
+                <div id="pred-confidence" class="dim"></div>
+                <div id="pred-reason" class="dim"></div>
+            </div>
+
+            <!-- Trạng thái cầu -->
+            <div class="section">
+                <div class="section-title">🧬 Trạng thái cầu</div>
+                <div id="cau-status">Đang tải...</div>
+                <div id="cau-detail" class="dim"></div>
+            </div>
+
+            <!-- Lịch sử gần -->
+            <div class="section">
+                <div class="section-title">📋 15 phiên gần nhất</div>
+                <div id="history-15" style="word-break: break-all;"></div>
+                <div class="dim">Tổng phiên API: <span id="total-sessions">0</span></div>
+            </div>
+
+            <!-- Phân tích chi tiết -->
+            <div class="section">
+                <div class="section-title">🧠 Phân tích hệ thống</div>
+                <div id="analysis-detail" class="dim"></div>
+            </div>
+
+            <div class="dim" style="text-align:center;">Cập nhật mỗi 5s</div>
+        </div>
     </div>
-    <div class="panel-content">
-      
-      <div id="stats-box">
-        <h4 style="color: #e94560;">📊 Thống kê phiên hiện tại</h4>
-        <p class="info-text">🟢 Thắng: <span id="win-count">0</span> | 🔴 Thua: <span id="loss-count">0</span></p>
-        <p class="info-text">📈 Tỉ lệ đúng: <span id="accuracy-rate">0.0%</span></p>
-      </div>
 
-      <div id="prediction-result" class="prediction-box">
-        <h4>🔮 DỰ ĐOÁN TIẾP THEO</h4>
-        <!-- PyScript sẽ cập nhật vào đây -->
-        <p id="pred-output" style="font-size: 2.5em; font-weight: bold;">--</p>
-        <p id="analysis-info" class="info-text">Đang chờ dữ liệu...</p>
-      </div>
-
-      <!-- PyScript environment -->
-      <py-config>
+    <!-- PyScript -->
+    <py-config>
         packages = ["requests"]
-      </py-config>
-      <py-script>
+    </py-config>
+    <py-script>
         import requests
         import json
         from collections import defaultdict
+        import asyncio
         import time
 
         API_URL = "http://103.249.117.201:49483/sunwin/tx?key=e9d80d5dcb2435e28010f71b980d67a5a35610e7a863d0d7"
-        
-        # TODO: Copy toàn bộ logic dự đoán từ file SUNWIN v5.0 vào đây
-        # Ví dụ đơn giản hóa:
-        def get_prediction():
+        last_session_id = None
+        last_prediction = None
+        wins = 0
+        losses = 0
+
+        def fetch_data():
             try:
-                resp = requests.get(API_URL, timeout=10).json()
-                if resp['status'] == 'OK':
-                    last_result = resp['data'][-1]['kết quả']
-                    return last_result 
-            except Exception as e:
-                return "Lỗi API"
-        
-        # Hàm cập nhật giao diện bằng JS
-        from js import document
-        def update_ui(prediction):
-            output_element = document.getElementById("pred-output")
-            if prediction == "Tài":
-                output_element.className = "tai-text"
-                output_element.innerHTML = "TÀI"
-            else:
-                output_element.className = "xiu-text"
-                output_element.innerHTML = "XỈU"
-        
-        # Chạy thử khi load trang
-        try:
-            result = get_prediction()
-            update_ui(result)
-        except Exception as e:
-            print(f"Lỗi PyScript: {e}")
-      </py-script>
-    </div>
-  </div>
+                resp = requests.get(API_URL, timeout=10)
+                resp.raise_for_status()
+                data = resp.json()
+                if "data" in data and isinstance(data["data"], list):
+                    sorted_data = sorted(data["data"], key=lambda x: x["updatedAt"])
+                    return sorted_data
+                return None
+            except Exception:
+                return None
 
-  <script>
-    // === Logic kéo thả cho bảng điều khiển ===
-    const panel = document.getElementById('draggable-panel');
-    const header = document.getElementById('panel-header');
+        def analyze(history_data):
+            """Trả về (dự_đoán, confidence, reason, cau_status, cau_detail, full_sequence)"""
+            if not history_data:
+                return "T", 50, "Không có dữ liệu", "Không xác định", "", []
+            full_seq = []
+            for item in history_data:
+                kq = item.get("kết quả", "").strip().lower()
+                full_seq.append("T" if kq == "tài" else "X")
+            if len(full_seq) < 2:
+                return "T", 50, "Chưa đủ dữ liệu", "Chưa đủ dữ liệu", "", full_seq
+            # Mô hình Markov bậc 1
+            chain = defaultdict(lambda: {'T':0,'X':0})
+            for i in range(len(full_seq)-1):
+                chain[full_seq[i]][full_seq[i+1]] += 1
+            last = full_seq[-1]
+            if last in chain:
+                total = chain[last]['T'] + chain[last]['X']
+                if total >= 5:
+                    tai_conf = chain[last]['T']/total*100
+                    xiu_conf = chain[last]['X']/total*100
+                    if tai_conf >= 60:
+                        return ("T", tai_conf, f"Markov: Tài {tai_conf:.0f}%", "Theo Markov", f"Bậc 1, {total} mẫu", full_seq)
+                    elif xiu_conf >= 60:
+                        return ("X", xiu_conf, f"Markov: Xỉu {xiu_conf:.0f}%", "Theo Markov", f"Bậc 1, {total} mẫu", full_seq)
+            # Streak
+            streak = 1
+            for i in range(len(full_seq)-2, -1, -1):
+                if full_seq[i] == last:
+                    streak += 1
+                else:
+                    break
+            opposite = 'X' if last == 'T' else 'T'
+            if streak >= 7:
+                return (opposite, 70, f"Streak: bẻ sau {streak} lần", "Gãy cầu", f"Bệt {streak}", full_seq)
+            elif streak >= 4:
+                return (last, 65, f"Streak: theo bệt {streak} lần", "Bệt tiếp diễn", f"Bệt {streak}", full_seq)
+            # Mặc định
+            return (opposite, 55, "Mặc định bẻ cầu", "Cầu loan", "", full_seq)
 
-    let isDragging = false;
-    let offsetX, offsetY;
+        def update_ui(pred, conf, reason, cau_status, cau_detail, full_seq, total_sessions):
+            from js import document
+            document.getElementById("pred-result").innerHTML = f'<span class="tai">TÀI</span>' if pred == 'T' else f'<span class="xiu">XỈU</span>'
+            document.getElementById("pred-confidence").innerText = f"Độ tự tin: {conf:.0f}%"
+            document.getElementById("pred-reason").innerText = reason
+            document.getElementById("cau-status").innerHTML = f"<strong>{cau_status}</strong>"
+            document.getElementById("cau-detail").innerText = cau_detail
+            if len(full_seq) >= 15:
+                hist = full_seq[-15:]
+                hist_str = " ".join([f'<span class="tai">T</span>' if c=='T' else f'<span class="xiu">X</span>' for c in hist])
+                document.getElementById("history-15").innerHTML = hist_str
+            document.getElementById("total-sessions").innerText = str(total_sessions)
+            document.getElementById("win-count").innerText = str(wins)
+            document.getElementById("loss-count").innerText = str(losses)
+            total = wins + losses
+            if total > 0:
+                document.getElementById("accuracy").innerText = f"{wins/total*100:.1f}%"
+            document.getElementById("analysis-detail").innerText = reason
 
-    header.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      offsetX = e.clientX - panel.getBoundingClientRect().left;
-      offsetY = e.clientY - panel.getBoundingClientRect().top;
-      panel.style.cursor = 'grabbing';
-    });
+        async def main_loop():
+            global last_session_id, last_prediction, wins, losses
+            while True:
+                try:
+                    data = fetch_data()
+                    if data:
+                        latest = data[-1]
+                        current_session = latest.get("phiên", 0)
+                        # Nếu phiên mới
+                        if last_session_id is None or current_session > last_session_id:
+                            # Đánh giá dự đoán trước
+                            if last_session_id is not None and last_prediction is not None:
+                                kq_thuc = latest.get("kết quả", "").strip().lower()
+                                if (last_prediction == 'T' and kq_thuc == 'tài') or (last_prediction == 'X' and kq_thuc != 'tài'):
+                                    wins += 1
+                                else:
+                                    losses += 1
+                            last_session_id = current_session
+                            pred, conf, reason, cau_status, cau_detail, full_seq = analyze(data)
+                            last_prediction = pred
+                            update_ui(pred, conf, reason, cau_status, cau_detail, full_seq, len(data))
+                    await asyncio.sleep(5)
+                except Exception as e:
+                    print(f"Lỗi: {e}")
+                    await asyncio.sleep(5)
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      let newX = e.clientX - offsetX;
-      let newY = e.clientY - offsetY;
-      
-      // Giới hạn panel trong cửa sổ
-      newX = Math.max(0, Math.min(newX, window.innerWidth - panel.offsetWidth));
-      newY = Math.max(0, Math.min(newY, window.innerHeight - panel.offsetHeight));
-      
-      panel.style.left = newX + 'px';
-      panel.style.top = newY + 'px';
-    });
+        # Khởi động vòng lặp async
+        import asyncio
+        asyncio.ensure_future(main_loop())
+    </py-script>
 
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
-      panel.style.cursor = '';
-    });
+    <script>
+        // ========== Logic kéo thả panel ==========
+        const panel = document.getElementById('tool-panel');
+        const header = document.getElementById('panel-header');
+        const toggleBtn = document.getElementById('toggle-tool-btn');
+        const minimizeBtn = document.getElementById('minimize-btn');
 
-    // Sửa nút toggle để đóng/mở đúng cách
-    const toggleBtn = document.getElementById('toggle-btn');
-    const closeBtn = document.getElementById('close-panel-btn');
-    
-    function showPanel() {
-      panel.style.display = 'block';
-      toggleBtn.style.display = 'none';
-    }
-    
-    function hidePanel() {
-      panel.style.display = 'none';
-      toggleBtn.style.display = 'block';
-    }
-    
-    toggleBtn.addEventListener('click', showPanel);
-    closeBtn.addEventListener('click', hidePanel);
+        let isDragging = false;
+        let offsetX, offsetY;
 
-    // TODO: Thêm logic tự động cập nhật UI bằng cách chạy lại PyScript theo chu kỳ
-    // hoặc sử dụng setInterval để gọi hàm Python thông qua PyScript's py-* API.
-  </script>
+        header.addEventListener('mousedown', (e) => {
+            if (e.target === minimizeBtn) return; // không kéo khi bấm nút
+            isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            panel.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            let x = e.clientX - offsetX;
+            let y = e.clientY - offsetY;
+            // Giới hạn trong màn hình
+            x = Math.max(0, Math.min(x, window.innerWidth - panel.offsetWidth));
+            y = Math.max(0, Math.min(y, window.innerHeight - panel.offsetHeight));
+            panel.style.left = x + 'px';
+            panel.style.top = y + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            panel.style.cursor = '';
+        });
+
+        // Toggle panel
+        function showPanel() {
+            panel.style.display = 'block';
+            toggleBtn.classList.add('hidden');
+        }
+        function hidePanel() {
+            panel.style.display = 'none';
+            toggleBtn.classList.remove('hidden');
+        }
+        toggleBtn.addEventListener('click', showPanel);
+        minimizeBtn.addEventListener('click', hidePanel);
+
+        // Khi trang load, nếu muốn hiện panel luôn thì gọi showPanel()
+        // Ở đây mặc định ẩn, người dùng tự bật.
+    </script>
 </body>
 </html>
